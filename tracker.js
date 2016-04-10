@@ -494,6 +494,7 @@ if(!newTurn){
 			
 			if(act=='accept-shot'){
 				$('pop').remove();
+				topButtons.html('');
 				parent._completeTurn();
 			}
 			
@@ -536,7 +537,7 @@ TABLE.prototype._completeTurn = function(){
 		parent.currentTurn++;
 		
 		
-		$('#topButtons').html('');
+		
 		parent._startGame(true);
 		
 	}
