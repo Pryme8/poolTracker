@@ -536,7 +536,7 @@ TABLE.prototype._completeTurn = function(){
 		parent.currentTurn++;
 		
 		
-		
+		$('#topButtons').html('');
 		parent._startGame(true);
 		
 	}
