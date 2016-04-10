@@ -494,6 +494,8 @@ if(!newTurn){
 			
 			if(act=='accept-shot'){
 				$('pop').remove();
+				phaseBox.text("- Select Target Ball -");
+				addsink.fadeOut(600);
 				topButtons.html('');
 				parent._completeTurn();
 			}
