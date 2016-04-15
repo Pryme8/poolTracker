@@ -13,8 +13,7 @@ game{
 	display:block;
 	position:fixed;
 	top:0;left:0;
-	width:100vw;
-	height:100vh;
+	bottom: 0; right:0;
 	overflow:hidden;
 	z-index:0;
 		 -webkit-touch-callout: none; /* iOS Safari */
@@ -28,8 +27,8 @@ game{
 game::before{
 	display:block;
 	position:fixed;
-	top:0;left:0;
-	bottom:0;right:0;
+	width:100vw;
+	height: 100vh;
 	overflow:hidden;
 	background-image:url(../imgs/table.svg);
 	background-position:center center;
@@ -326,8 +325,8 @@ player #color{
 
 	 
 	 game::before{
-	width:100vh;
-	height:100vw;
+	  width:100vh;
+		 height: 100vw;
 		 transform-origin:left bottom;
 	transform:rotate(90deg) translate(-100vw,0);
 		-webkit-transform:rotate(90deg) translate(-100vw,0);
