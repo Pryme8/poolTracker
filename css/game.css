@@ -7,7 +7,7 @@ body, html {
 	border:0;padding:0;	
 	overflow:hidden;
 	font-size:6vh;
-	position:fixed;
+	position:relative;
 }
 
 game{
@@ -16,8 +16,8 @@ game{
 	top:0;left:0;
 	bottom: 0; right:0;
 	overflow:hidden;
-	z-index:0;
-		 -webkit-touch-callout: none; /* iOS Safari */
+	z-index:1;
+	-webkit-touch-callout: none; /* iOS Safari */
   -webkit-user-select: none;   /* Chrome/Safari/Opera */
   -khtml-user-select: none;    /* Konqueror */
   -moz-user-select: none;      /* Firefox */
@@ -34,7 +34,7 @@ game::before{
 	background-image:url(../imgs/table.svg);
 	background-position:center center;
 	background-size:100% 100%;
-	z-index:1;
+	z-index:2;
 	content:'';
 }
 
