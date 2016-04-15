@@ -4,23 +4,19 @@
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1">
     
-    <link rel="stylesheet" href="./css/themes/billiards.min.css" />
-  <link rel="stylesheet" href="./css/themes/jquery.mobile.icons.min.css" />
-  <link rel="stylesheet" href="http://code.jquery.com/mobile/1.4.5/jquery.mobile.structure-1.4.5.min.css" /> 
-  
-  
-  
+    <link rel="stylesheet" href="./css/jquery.mobile-1.4.5.min.css">
+     <link rel="stylesheet" href="./css/jquery-ui.css">
     <link rel="stylesheet" href="./css/colorpicker.css">
     
      <link rel="stylesheet" href="./css/game.css">
      
     
-   
-  <script src="http://code.jquery.com/jquery-1.11.1.min.js"></script> 
-  <script src="http://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.js"></script> 
-  <script src="./colorpicker.js"></script>
-  
-  <script src="./poolHall.js"></script>
+    <script src="https://code.jquery.com/jquery-2.2.3.min.js"></script>   
+    <script src="http://code.jquery.com/ui/1.11.3/jquery-ui.min.js"></script>    
+    <script src="https://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.js"></script>
+    <script src="./colorpicker.js"></script>
+    
+    <script src="./tracker.js"></script>
     
 <title>Pool Track</title>
 
@@ -30,7 +26,7 @@
 </game>
 <script>
 $(function() {
-new poolHall();
+    var newGame = new TABLE();
 });
 </script>
 </body>
