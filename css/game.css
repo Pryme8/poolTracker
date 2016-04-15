@@ -340,7 +340,7 @@ player #color{
 	 #play-area{
 	left:15%;
 	right:15%;
-	top:20%;
+	top:10%;
 	bottom:10%;
 
 }
@@ -370,6 +370,14 @@ player #color{
 	 
 	 balls ball{
 		 width:24%;
+	 }
+	 
+	 #table-add-rules{
+		  font-size: 0.35em;
+	 }
+	 
+	 #table-name{
+		 max-width:50%;
 	 }
 	 
   }

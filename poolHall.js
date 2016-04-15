@@ -158,6 +158,8 @@ poolHall.prototype._AddNewPlayerBlock = function(){
 }
 
 poolHall.prototype._startNewGame = function(){
+	
+	
 	var 
 	nameOfGame = this.panes.newGame.find('input#name-of-table').val(),
 	typeOfGame = this.panes.newGame.find('select#select-table-type').val();
@@ -249,7 +251,7 @@ poolHall.prototype._startNewGame = function(){
 	this.playArea.append(this.panes.balls);
 	this.game.append(this.panes.table);
 	this.game.append(this.tools);
-
+	
 	
 };
 
@@ -328,10 +330,9 @@ poolHall.prototype._toggleTools = function(state){
 		if(this.tools.css('right')!= "0"){
 		this.tools.css({"right":"0"});
 		if($('body').width()> $('body').height()){
-			
-			
 		this.playArea.css({"right": (this.tools.width()*1.5)});
 		}
+		
 		}
 	};
 	if(state=="target-select"){
@@ -360,6 +361,9 @@ poolHall.prototype._toggleTools = function(state){
 		
 		
 	if(state=="Add-Sink"){
+		if($('body').width() > $('body').height()){
+		this.playArea.css({"right":(this.tools.width()*1.5)});
+		}
 		this._ballsOnTable('Add-Sink');
 		this.tools.children("div").css('display', 'none');	
 		this.tools.children("div#Add-Sink").css('display', 'block');	
