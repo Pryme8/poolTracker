@@ -593,8 +593,9 @@ cP.find('#score').removeClass('negitive positive');
 if(!gameEnd){
 	this.table.currentTurn++;
 	this.info.turnNumber.text(this.table.currentTurn+1);
+	console.log("madeGoodShot:"+madeGoodShot+" - madeBadShot:"+madeBadShot);
+	var rO = parseInt(this.table.rules.rotation,10);
 	
-	var rO = this.table.rules.rotation;
 	//Standard Shot Rotation
 	if(rO==0){
 		if(!madeGoodShot || madeBadShot){
@@ -602,6 +603,7 @@ if(!gameEnd){
 			if(this.table.currentPlayer > this.table._players.length-1){
 				this.table.currentPlayer = 0;
 			}	
+		cP.appendTo(cP.parent());
 		}
 	
 			
@@ -611,10 +613,10 @@ if(!gameEnd){
 			if(this.table.currentPlayer > this.table._players.length-1){
 				this.table.currentPlayer = 0;
 			}
-		
+		cP.appendTo(cP.parent());
 	}
 	
-	cP.appendTo(cP.parent());
+	
 	this.shotType = null;
 	this.selectedBall = null;
 	this._toggleTools('target-select');
