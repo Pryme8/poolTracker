@@ -7,14 +7,15 @@ body, html {
 	border:0;padding:0;	
 	overflow:hidden;
 	font-size:6vh;
-	position:relative;
+	position:fixed;
 }
 
 game{
 	display:block;
 	position:fixed;
 	top:0;left:0;
-	bottom: 0; right:0;
+	width:100vw;
+	height:100vh;
 	overflow:hidden;
 	z-index:1;
 	-webkit-touch-callout: none; /* iOS Safari */
@@ -27,7 +28,7 @@ game{
 
 game::before{
 	display:block;
-	position:fixed;
+	position:absolute;
 	width:100vw;
 	height: 100vh;
 	overflow:hidden;
@@ -40,7 +41,8 @@ game::before{
 
 #play-area{
 	display:block;
-	position: absolute;
+	
+	position: fixed;
 	left:10%;
 	right:10%;
 	top:15%;
@@ -114,6 +116,7 @@ player{
   border-radius: 5px;
 	border: 1px solid black;
 	background: rgba(255,255,255,0.6);
+	color:#000;
 }
 
 player input#player-name{
@@ -223,6 +226,18 @@ box-shadow: 0 5px 5px 0 rgba(0,0,0,0.2);
   z-index: -1;	
 }
 
+#newGamePop{
+position: absolute;
+width: auto;
+height: auto;
+top: 50%;
+left: 50%;
+transform: translate(-50%, -50%);
+z-index: 1001;
+background: white;
+padding: 0.2em;
+}
+
 balls{
 	display: block;
 	position: absolute;
@@ -261,12 +276,43 @@ balls ball:hover:before, balls ball:active:before, balls ball.added::before{
   box-shadow: 0 0 6px 3px rgba(255,255,255,0.8);
 }
 
+balls ball.sunk-good::before{
+	-webkit-box-shadow: 0 0 6px 3px rgba(0,120,255,0.8);
+  box-shadow: 0 0 6px 3px rgba(0,120,255,0.8);
+}
+balls ball.sunk-bad::before, balls ball.offTable::before{
+	-webkit-box-shadow: 0 0 6px 3px rgba(255,0,0,0.8);
+  box-shadow: 0 0 6px 3px rgba(255,0,0,0.8);
+}
+
 
 balls ball img{
 	position: relative;
 	width: 100%;
 	height: auto;
 	pointer-events: none;
+}
+
+#shot-sum{
+background: white;
+width: 50%;
+height: 80%;
+left: 25%;
+top: 10%;
+z-index: 1001;
+position: fixed;
+display: none;
+	color:black;
+	padding: 0.2em;
+	overflow-y: auto;
+	font-size: 0.6em;
+}
+
+.positive{
+	color:green;
+}
+.negitive{
+	color:red;
 }
 
 #tools{
@@ -310,6 +356,11 @@ margin:0.2em;
 .toggle.selected{
 	color:white;
 	background: green;
+}
+
+#shot-type{
+	font-size: 0.35em;
+	color:#000;
 }
 
 /* Landscape */

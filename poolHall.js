@@ -14,6 +14,10 @@ var currentIndex = this.length, temporaryValue, randomIndex;
   return;
 }
 
+String.prototype.strip = function(count){
+	return this.substring(0, this.length-count);
+}
+
 function randomColor(){
 
 var rgb = {
@@ -27,6 +31,12 @@ return rgb
 
 
 
+
+
+
+
+
+
 poolHall = function(){
 	this.table = null;	
 	this.game = $('game');
@@ -34,8 +44,6 @@ poolHall = function(){
 	this.game.append(this.playArea);
 	this.panes = {};
 	this.panes.newGame = $(poolHall.PANES.NEWGAME);
-	this.addedSinks = []; //decliration fix... lazy...
-	
 	
 	for (var game in poolHall.GAMETYPE) {
       this.panes.newGame.find('#select-table-type').append('<option value="'+game+'">'+poolHall.GAMETYPE[game].name+'</option>');
@@ -115,6 +123,7 @@ poolHall = function(){
 
 poolHall.prototype._AddNewPlayerBlock = function(){
 	var newPlayer = $(poolHall.PLAYER.newPlayerBlock);
+	
 	var color = randomColor();
 	
 	newPlayer.css({
@@ -155,6 +164,7 @@ poolHall.prototype._AddNewPlayerBlock = function(){
 		});
 		
 	this.panes.pO.append(newPlayer);
+	
 }
 
 poolHall.prototype._startNewGame = function(){
@@ -204,45 +214,78 @@ poolHall.prototype._startNewGame = function(){
 		newPlayer.find('#name').text(e.name);
 		newPlayer.css({"background-color":e.color.background, "border-color": e.color.border});
 		parent.info.playerBar.append(newPlayer);
-		
+		newPlayer.attr('id',i);
 	});
 	
 	
 	this.panes.balls = $(poolHall.PANES.BALLSON);
 	
-	this._ballsOnTable('target');
-	
-	
 	this.tools = $(poolHall.PANES.TOOLS);
+	this.panes.shotSum = $(poolHall.PANES.SHOTSUM);
+	
+	this._toggleTools("Break");
 	
 	this.tools.find("[type='button']").button();
+	this.panes.shotSum.find("[type='button']").button();
+	
+	this.panes.shotSum.bind("click",function(e){
+		
+		var target = $(e.target);
+		console.log(target);
+		if(target.val()=="Cancel-Shot"){
+			target.parent().parent().css({"display":"none"});
+		}
+		if(target.val()=="Accept-Shot"){
+			parent._rollTurnOver();
+			target.parent().parent().css({"display":"none"});
+		}
+		});
+	
 	
 	this.tools.find("[type='button']").bind('click', function(e){
 		var act = $(e.target).attr('id');
 		if(act=="back"){
 			parent.shotType = null;
 			parent.selectedBall = null;
-			parent.addedSinks = [];
+			$.each(parent.table.balls, function(i,ball){
+				if(ball.state != "out-of-play"){
+					ball.state = "onTable";
+				}
+			});
+			if(parent.table.currentTurn==0){
+				parent._toggleTools('Break');
+			}else{
 			parent._toggleTools('target-select');
+			}
 			
 		}
 		if(act=="back-two"){
-			parent.addedSinks = [];
 			parent.shotType = null;
+			$.each(parent.table.balls, function(i,ball){
+				if(ball.state != "out-of-play"){
+					ball.state = "onTable";
+				}
+			});
 			parent._toggleTools('target-selected');
 			
 		}
-		if(act=="Easy-Shot" || act=="Easy-Miss"){
+		if(act=="Easy-Shot" || act=="Easy-Miss" || act=="Hard-Shot" || act=="Hard-Miss" || act=="Safe-Shot" || act=="Foul-Shot"){
 			parent.shotType = act;
 			parent._toggleTools(act);
 		}
-		if(act=="Add-Sink"){
-			parent._toggleTools(act);
-		}
-		if(act=="Confirm-Sinks"){
+		if(act=="Add-Sink" || act=="Confirm-Sinks" || act=="Add-Shots" || act=="Confirm-Shots" || act=="Add-Off-Tables" || act=="Confirm-Off-Tables"){
 			parent._toggleTools(act);
 		}
 		
+		if(act=="Confirm-Shot"){
+		parent.table.tempShot =  new poolHall.SHOT(parent.table._players[parent.table.currentPlayer], parent.table.currentTurn, parent.selectedBall, parent.shotType, $.extend(true, {}, parent.table.balls), parent);
+		parent._showShotResults();
+		}
+		
+		if(act=="Confirm-Break"){
+		parent.table.tempShot = new poolHall.SHOT(parent.table._players[parent.table.currentPlayer], parent.table.currentTurn, null, "Break", $.extend(true, {}, parent.table.balls), parent);
+		parent._showShotResults();
+		}
 	
 		console.log(parent);
 	});
@@ -251,6 +294,7 @@ poolHall.prototype._startNewGame = function(){
 	this.playArea.append(this.panes.balls);
 	this.game.append(this.panes.table);
 	this.game.append(this.tools);
+	this.game.append(this.panes.shotSum);
 	
 	
 };
@@ -259,72 +303,78 @@ poolHall.prototype._ballsOnTable = function(state){
 	this.panes.balls.html('');
 	var parent = this;
 	$.each(this.table.balls, function(k,e){
+	
+		if(state == "Pick-Shot"){
+		if(e.state =="offTable" || e.state == "sunk-good" || e.state == "sunk-bad" || e.name == "Cue" || e.state == "out-of-play"){
+			return true;
+		}
+		}
 		
-		if(state == "target"){if(e.sunk || e.name == "Cue"){return true;}};
-		if(state == "selected"){
-			if(parent.shotType == "Easy-Shot"){			
-			if(k != parent.selectedBall){
-				var doNotSkip = false;
-
-				$.each(parent.addedSinks, function(i, v){
-					if(k == v){doNotSkip = true; return false;}
-				});
-				if(!doNotSkip){
-				return true;
-				}
-			}
-			}else if(parent.shotType == "Easy-Miss"){
-				var doNotSkip = false;
-
-				$.each(parent.addedSinks, function(i, v){
-					if(k == v){doNotSkip = true; return false;}
-				});
-				if(!doNotSkip){
-				return true;
-				}
-			}else if(!parent.shotType){
-				if(k != parent.selectedBall){
-					return true;
-				}
-			}
-			
-			
-		};
-		if(state == "Add-Sink"){
-			if(parent.shotType == "Easy-Shot"){
-			if(e.sunk || k == parent.selectedBall){return true;}
-			}else if(parent.shotType == "Easy-Miss"){
-			if(e.sunk){return true;}	
-			}
-			
-		};
+		if(state == "Ball-Picked"){
+		if(parent.shotType == "Easy-Miss" || parent.shotType == "Hard-Miss" || parent.shotType == "Safe-Shot" || parent.shotType == "Foul-Shot" || parent.shotType == "Add-Shots" ){
+			if(e.state == "onTable" || e.state == "out-of-play"){return true;}
+		}else{	
+		if(k != parent.selectedBall){
+			if(e.state == "onTable" || e.state == "out-of-play"){return true;}
+		}
+		}
+		}
 		
+		if(state == "Add-Sink" || state=="Add-Shots" || state == "Add-Off-Tables"){
+		if(parent.shotType == "Easy-Miss" || parent.shotType == "Hard-Miss" || parent.shotType == "Safe-Shot" || parent.shotType == "Foul-Shot" || parent.shotType == "Add-Shots" ){
+			if(e.state =="offTable" || e.state == "sunk-good" || e.state == "sunk-bad" || e.state == "out-of-play"){
+			return true;
+		}
+		}else{	
+		if(k == parent.selectedBall || e.state =="offTable" || e.state == "sunk-good" || e.state == "sunk-bad" || e.state == "out-of-play"){
+			return true;
+		}
+		}
+		if(state=="Add-Shots" && e.name == "Cue"){
+			return true;	
+		}
+		}
+		
+		if(state == "Break"){
+			if(e.state !="offTable" || e.state != "sunk-good" || e.state != "sunk-bad"){
+			return true;
+		}
+		}
 		
 		
 		
 		
 		var newBall = $('<ball id="'+k+'"><img src="'+e.imgUrl+'" /></ball>');
-			if(state == "target"){
+			if(state == "Pick-Shot"){
 				newBall.bind('click', function(e){
-						parent.panes.balls.find('.added').removeClass('added');
-						$(e.target).addClass('added');
 						parent.selectedBall = $(e.target).attr('id');
 						parent._toggleTools('target-selected');
 					});	
 			}
-			if(state == "Add-Sink"){
+			if(state == "Ball-Picked"){
+				if(e.state == "sunk-good"){newBall.addClass('sunk-good');}
+				if(e.state == "sunk-bad" ){newBall.addClass('sunk-bad');}
+				if(e.state == "offTable" ){newBall.addClass('offTable');}
+			}
+			
+			if(state == "Add-Sink" || state == "Add-Off-Tables" || state == "Add-Shots"){
 				newBall.bind('click', function(e){
 						$(e.target).toggleClass('added');
 					});	
 			}
+			
+
+	
 		
 		parent.panes.balls.append(newBall);
 	})
 };
 
 poolHall.prototype._toggleTools = function(state){
+	var parent = this;
+	var table = parent.table;
 	if(state=="target-selected"){
-		this._ballsOnTable('selected');
+		this._ballsOnTable('Ball-Picked');
 		this.tools.children("div").css('display', 'none');	
 		this.tools.children("div#result").css('display', 'block');	
 		if(this.tools.css('right')!= "0"){
@@ -337,7 +387,7 @@ poolHall.prototype._toggleTools = function(state){
 	};
 	if(state=="target-select"){
 		
-		this._ballsOnTable('target');
+		parent._ballsOnTable('Pick-Shot');
 		this.tools.children("div").css('display', 'none');
 		if(this.tools.css('right')!= "-100%"){
 		this.panes.balls.find('.added').removeClass('added');
@@ -348,15 +398,41 @@ poolHall.prototype._toggleTools = function(state){
 		}
 	};
 	if(state=="Easy-Shot"){
-		this._ballsOnTable('selected');
+		table.balls[parent.selectedBall].state = "sunk-good";
+		this._ballsOnTable('Ball-Picked');
 		this.tools.children("div").css('display', 'none');	
 		this.tools.children("div#Easy-Shot").css('display', 'block');	
 	};
 	
 	if(state=="Easy-Miss"){
-		this._ballsOnTable('selected');
+		this._ballsOnTable('Ball-Picked');
 		this.tools.children("div").css('display', 'none');	
 		this.tools.children("div#Easy-Miss").css('display', 'block');	
+	};
+	
+	if(state=="Hard-Shot"){
+		table.balls[parent.selectedBall].state = "sunk-good";
+		this._ballsOnTable('Ball-Picked');
+		this.tools.children("div").css('display', 'none');	
+		this.tools.children("div#Hard-Shot").css('display', 'block');	
+	};
+	
+	if(state=="Hard-Miss"){
+		this._ballsOnTable('Ball-Picked');
+		this.tools.children("div").css('display', 'none');	
+		this.tools.children("div#Hard-Miss").css('display', 'block');	
+	};
+	
+	if(state=="Safe-Shot"){
+		this._ballsOnTable('Ball-Picked');
+		this.tools.children("div").css('display', 'none');	
+		this.tools.children("div#Safe-Shot").css('display', 'block');	
+	};
+	
+	if(state=="Foul-Shot"){
+		this._ballsOnTable('Ball-Picked');
+		this.tools.children("div").css('display', 'none');	
+		this.tools.children("div#Foul-Shot").css('display', 'block');	
 	};
 		
 		
@@ -369,29 +445,261 @@ poolHall.prototype._toggleTools = function(state){
 		this.tools.children("div#Add-Sink").css('display', 'block');	
 	};
 	
-	if(state=="Confirm-Sinks"){
-		var temp = [];
-		$('balls').find('.added').each(function(i,e){
-			temp.push($(e).attr('id'));
-		});
-		this.addedSinks = temp;
-		temp = null;
-		
-		if(this.shotType == "Easy-Shot" || this.shotType == "Easy-Miss"){
-		this._ballsOnTable('selected');
+	if(state=="Add-Off-Tables"){
+		if($('body').width() > $('body').height()){
+		this.playArea.css({"right":(this.tools.width()*1.5)});
 		}
-		
+		this._ballsOnTable('Add-Off-Tables');
 		this.tools.children("div").css('display', 'none');	
+		this.tools.children("div#Add-Off-Tables").css('display', 'block');	
+	};
+	
+	if(state=="Add-Shots"){
+		if($('body').width() > $('body').height()){
+		this.playArea.css({"right":(this.tools.width()*1.5)});
+		}
+		this._ballsOnTable('Add-Shots');
+		this.tools.children("div").css('display', 'none');	
+		this.tools.children("div#Add-Shots").css('display', 'block');	
+	};
+	
+	if(state=="Break"){
+		this._ballsOnTable('Break');
+		this.tools.children("div").css('display', 'none');	
+		this.tools.children("div#Break").css('display', 'block');	
+		if(this.tools.css('right')!= "0"){
+		this.tools.css({"right":"0"});
+		}
+	};
+	
+	if(state=="Confirm-Sinks"){
+		$('balls').find('.added').each(function(i,e){
+			if(parent.table.currentTurn == 0){
+				if($(e).attr('id')=="Cue"){
+					table.balls[$(e).attr('id')].state = "sunk-bad";
+				}else{
+					table.balls[$(e).attr('id')].state = "sunk-good";
+				}
+			}else{
+			table.balls[$(e).attr('id')].state = "sunk-bad";
+			}
+		});
+
+		this._ballsOnTable('Ball-Picked');
+	
+		this.tools.children("div").css('display', 'none');	
+		if(parent.table.currentTurn == 0){
+		this.tools.children("div#Break").css('display', 'block');
+		}else{
+		this.tools.children("div#"+this.shotType).css('display', 'block');	
+		}
+	};
+	
+	if(state=="Confirm-Off-Tables"){
 		
+		
+		$('balls').find('.added').each(function(i,e){
+			table.balls[$(e).attr('id')].state = "offTable";
+		});
+		
+		
+		this._ballsOnTable('Ball-Picked');		
+		this.tools.children("div").css('display', 'none');			
+		if(parent.table.currentTurn == 0){
+		this.tools.children("div#Break").css('display', 'block');
+		}else{
+		this.tools.children("div#"+this.shotType).css('display', 'block');	
+		}
+	};
+	
+	if(state=="Confirm-Shots"){
+		
+		
+		$('balls').find('.added').each(function(i,e){
+			table.balls[$(e).attr('id')].state = "sunk-good";
+		});
+		
+		
+		this._ballsOnTable('Ball-Picked');		
+		this.tools.children("div").css('display', 'none');			
 		this.tools.children("div#"+this.shotType).css('display', 'block');	
 	};
+	
+	
+	
 };
 
+poolHall.prototype._rollTurnOver = function(){
+var parent = this;
+this.table.shots.push($.extend(true,{},this.table.tempShot));
+this.table.games[this.table.currentGame].shots.push($.extend(true,{},this.table.tempShot));
+this.table._players[this.table.currentPlayer].shots.push($.extend(true,{},this.table.tempShot));
+this.table._players[this.table.currentPlayer].score += this.table.tempShot._summary.value;
+var cP = $('pane#table #player-bar player#'+parent.table.currentPlayer);
+var tempPlayerId = parent.table.currentPlayer;
+
+
+var madeBadShot = false, madeGoodShot = false;
+$.each(parent.table.balls, function(i,ball){
+
+if(ball.name == "Cue"){
+	if(ball.state!="onTable"){
+		madeBadShot = true;
+	};
+	ball.state="onTable";
+	return true;
+	};
+
+if(ball.state == "out-of-play"){return true;}
+if(ball.state!="onTable"){
+	if(ball.state!='sunk-good'){
+	madeBadShot = true;
+	}else{
+	madeGoodShot = true;	
+	}
+	if(ball.state=="offTable"){
+		ball.state="onTable";
+		madeBadShot = true;
+	}else{
+		ball.state="out-of-play";
+	}
+};
+});
+
+var gameEnd = true;
+$.each(parent.table.balls, function(i,ball){
+	if(ball.name == "Cue"){return true;}
+	if(ball.state != "out-of-play"){gameEnd = false;}
+	
+});
+
+
+
+if(this.table.tempShot._result == "Easy-Miss" || this.table.tempShot._result == "Hard-Miss"){
+	madeBadShot = true;
+}
+
+this.tools.children("div#"+this.shotType).css('display', 'block');	
+
+cP.find('#score').text(parent.table._players[tempPlayerId].score);
+cP.find('#score').removeClass('negitive positive');
+	if(parent.table._players[tempPlayerId].score < 0){
+	cP.find('#score').addClass('negitive');
+	}else if(parent.table._players[tempPlayerId].score > 0){
+	cP.find('#score').addClass('positive');
+	}
+
+
+if(!gameEnd){
+	this.table.currentTurn++;
+	this.info.turnNumber.text(this.table.currentTurn+1);
+	
+	var rO = this.table.rules.rotation;
+	//Standard Shot Rotation
+	if(rO==0){
+		if(!madeGoodShot || madeBadShot){
+		this.table.currentPlayer++;
+			if(this.table.currentPlayer > this.table._players.length-1){
+				this.table.currentPlayer = 0;
+			}	
+		}
+	
+			
+	//Every Shot Rotation
+	}else{
+		this.table.currentPlayer++;
+			if(this.table.currentPlayer > this.table._players.length-1){
+				this.table.currentPlayer = 0;
+			}
+		
+	}
+	
+	cP.appendTo(cP.parent());
+	this.shotType = null;
+	this.selectedBall = null;
+	this._toggleTools('target-select');
+	
+
+}else{
+	this.table.currentTurn = 0;
+		this._rollGameOver();
+	
+}
+
+};
+
+var nGP = '<div id="newGamePop"><input type="button" value="New Game!" id="new-game" data-theme="a" /><input type="button" value="End Series" id="end-series" data-theme="b" /></div>';
+poolHall.prototype._rollGameOver = function(){
+	
+	
+	var parent = this;
+	var newGamePop = $(nGP);
+	this.game.append(newGamePop);
+	newGamePop.find("[type='button']").button().click(function(e){
+		var target = $(e.target);
+			if(target.attr('id')=="new-game"){
+				parent._newGameGo();
+				newGamePop.remove();
+			}else{
+				parent._showGameReport();
+				newGamePop.remove();
+			}
+		});
+	
+	
+};
+
+poolHall.prototype._newGameGo = function(){
+	var breakPlayer = null;
+	console.log('New Game GO!');
+	//Rotate Every Break;
+	if(this.table.rules.breakOrder == 0){
+		var lastBreak = this.table.games[this.table.games.length-1].breakingPlayer;
+		lastBreak ++;
+		if(lastBreak > this.table._players.length-1){
+		breakPlayer = 0;
+		}else{
+		breakPlayer = lastBreak;
+		}
+		console.log('break Player:'+breakPlayer);
+		this.table.games.push(new poolHall.GAME(this));
+		var newGame = this.table.games[this.table.games.length-1];
+		newGame.breakingPlayer = breakPlayer;
+		newGame.gameNumber = this.table.games.length-1;
+		
+		
+		
+	//Winner Breaks;	
+	}else if(this.table.rules.breakOrder == 1){
+	
+	//Loser Breaks;
+	}else if(this.table.rules.breakOrder == 2){
+		
+	}	
+	
+	var playerBlock = $('player#'+breakPlayer);
+	playerBlock.prependTo(playerBlock.parent());
+	
+	$.each(this.table.balls, function(i,ball){
+		ball.state = "onTable";
+	});
+	this.shotType = null, this.selectedBall = null;
+	
+	this._toggleTools("Break");
+	
+	this.info.gameNumber.text(this.table.games.length);
+	this.info.turnNumber.text(this.table.currentTurn+1);
+};
+
+poolHall.prototype._showGameReport = function(){
+
+};
 
 poolHall.TABLE = function(hall){
 	this._hall = hall;
 	this._name = this._hall.panes.newGame.find('input#name-of-table').val();
 	this._type = this._hall.panes.newGame.find('select#select-table-type').val();
+	
 	this.rules = {
 		breakOrder : parseInt(this._hall.panes.newGame.find('#breaking-rules .selected').attr('value'),10),
 		rotation : parseInt(this._hall.panes.newGame.find('#shot-rotation-rules .selected').attr('value'),10),
@@ -427,6 +735,19 @@ poolHall.TABLE = function(hall){
 	
 }
 
+poolHall.prototype._showShotResults = function(){
+	this.panes.shotSum.css('display', "block");
+	var shot = this.table.tempShot;
+	this.panes.shotSum.find('#shot-desc').text(shot._summary.desc);
+	var value = parseInt(shot._summary.value,10);
+	this.panes.shotSum.find('#shot-value').text(value);
+	this.panes.shotSum.find('#shot-value').removeClass('negitive positive');
+	if(value < 0){
+	this.panes.shotSum.find('#shot-value').addClass('negitive');
+	}else if(value > 0){
+	this.panes.shotSum.find('#shot-value').addClass('positive');
+	}
+}
 
 
 poolHall.PLAYER = function(table){
@@ -454,15 +775,130 @@ poolHall.GAME = function(table){
 	};
 };
 
-poolHall.SHOT = function(player, turn, target, result, addsinks){
+poolHall.SHOT = function(player, turn, target, result, balls, master){
+	this._master = master;
 	this._player = player;
 	this._turn = turn;
-	this._target = target;
+	if(target){
+	this._target = master.table.balls[target];
+	}else{
+	this._target = null;
+	}
+	console.log(this._target);
 	this._result = result;
-	this._addsinks = addsinks;
+	this._balls = balls;
 	this._timestamp = new Date(Date.now());
+	this._summary = this._generateSummary();
+	console.log(this._summary);
+
 };
 
+poolHall.SHOT.prototype._generateSummary = function(){
+var rString = this._player.name+" ", rValue = 0;
+var stringMakes = "", stringBadSink = "", stringOffTable = "";
+var scratch = false;
+var parent = this;
+console.log(rString);
+if(parent._result == "Easy-Shot"){
+
+$.each(parent._balls, function(i,ball){
+	if(ball.name == "Cue"){if(ball.state != "onTable"){scratch = true; rValue += ball.rules.make; return true;}}
+	if(ball.state == "onTable" || ball.state == "out-of-play"){return true}
+	if(ball.state == "sunk-bad"){rValue += ball.rules.miss; stringBadSink += ball.name+", "}
+	if(ball.state == "offTable"){rValue += ball.rules.miss; stringOffTable += ball.name+", "}
+	if(ball.state == "sunk-good"){if(scratch){rValue += ball.rules.miss}else{rValue += ball.rules.make}}
+});
+
+if(scratch){rString += ", SCRATCHED shooting at the "+this._target.name;}else{rString += ", MADE the "+this._target.name;}
+rString += " while taking an EASY SHOT."; 
+
+
+}
+if(parent._result == "Hard-Shot"){
+$.each(parent._balls, function(i,ball){
+	if(ball.name == "Cue"){if(ball.state != "onTable"){scratch = true; rValue += ball.rules.make; return true;}}
+	if(ball.state == "onTable" || ball.state == "out-of-play"){return true}
+	if(ball.state == "sunk-bad"){rValue += ball.rules.hard_shot_miss; stringBadSink += ball.name+", "}
+	if(ball.state == "offTable"){rValue += ball.rules.hard_shot_miss; stringOffTable += ball.name+", "}
+	if(ball.state == "sunk-good"){if(scratch){rValue += ball.rules.hard_shot_miss; if(ball.name != parent._target.name)stringBadSink += ball.name+", "}else{rValue += ball.rules.hard_shot_make;if(ball.name != parent._target.name)stringMakes += ball.name+", " }}
+});
+
+if(scratch){rString += ", SCRATCHED shooting at the "+this._target.name;}else{rString += ", MADE the "+this._target.name;}
+rString += " while taking a HARD SHOT."; 
+}
+
+if(parent._result == "Easy-Miss"){
+$.each(parent._balls, function(i,ball){
+	
+	if(ball.name == "Cue"){if(ball.state != "onTable"){scratch = true; rValue += ball.rules.make; return true;}}
+	if(ball.state == "out-of-play"){return true};
+	
+	if(ball.state == "sunk-bad"){rValue += ball.rules.miss; stringBadSink += ball.name+", "; return true;}
+	if(ball.state == "offTable"){rValue += ball.rules.miss; stringOffTable += ball.name+", "; return true;}
+	if(ball.name == parent._target.name){rValue += ball.rules.miss; return true;};
+});
+if(scratch){rString += ", SCRATCHED shooting at the "+this._target.name;}else{rString += ", MISSED the "+this._target.name;}
+rString += " while taking an EASY SHOT."; 
+}
+
+if(parent._result == "Hard-Miss"){
+$.each(parent._balls, function(i,ball){
+	if(ball.name == "Cue"){if(ball.state != "onTable"){scratch = true; rValue += ball.rules.make; return true;}}
+	if(ball.state == "out-of-play"){return true}
+	if(ball.state == "sunk-bad"){rValue += ball.rules.hard_shot_miss; stringBadSink += ball.name+", "; return true;}
+	if(ball.state == "offTable"){rValue += ball.rules.hard_shot_miss; stringOffTable += ball.name+", "; return true;}
+	if(ball.name == parent._target.name){rValue += ball.rules.hard_shot_miss; return true;};
+});
+if(scratch){rString += ", SCRATCHED shooting at the "+this._target.name;}else{rString += ", MISSED the "+this._target.name;}
+rString += " while taking a HARD SHOT."; 
+}
+
+if(parent._result == "Break"){
+$.each(parent._balls, function(i,ball){
+	if(ball.name == "Cue"){if(ball.state == "offTable" || ball.state == "sunk-bad"){scratch = true; rValue += ball.rules.make; return true;}}
+	if(ball.state == "onTable" || ball.state == "out-of-play"){return true}
+	if(ball.state == "sunk-good"){rValue += ball.rules.make; stringMakes += ball.name+", "}
+	if(ball.state == "offTable"){rValue += ball.rules.miss; stringOffTable += ball.name+", "}
+});
+if(scratch){rString += ", SCRATCHED while BREAKING. "}else{rString += ", BROKE. ";}
+
+}
+
+
+
+if(parent._result == "Foul-Shot" || parent._result == "Safe-Shot"){
+$.each(parent._balls, function(i,ball){
+	if(ball.name == "Cue"){if(ball.state != "onTable"){scratch = true; rValue += ball.rules.make; return true;}}
+	if(ball.state == "onTable" || ball.state == "out-of-play"){return true}
+		if(ball.state == "sunk-bad"){rValue += ball.rules.miss; stringBadSink += ball.name+", "}
+	if(ball.state == "offTable"){rValue += ball.rules.miss; stringOffTable += ball.name+", "}
+	if(scratch){rString += ", SCRATCHED while taking a ";}else{	rString += ", took a";}
+	if(parent._result == "Foul-Shot"){
+	rString += " FOUL SHOT.";
+	}else{
+	rString += " SAFE SHOT.";
+	}
+	
+	 
+});
+}
+
+if(stringMakes!=""){
+stringMakes = stringMakes.strip(2);
+ rString += "  Also made the: "+ stringMakes + " ball(s)."
+}
+if(stringBadSink!=""){
+stringBadSink = stringBadSink.strip(2);
+ rString += "  In Addition the: "+ stringBadSink + " ball(s), where illegally sunk."
+}
+if(stringOffTable!=""){
+stringOffTable = stringOffTable.strip(2);
+rString += "  While the: "+ stringOffTable + " ball(s), where knocked off the table."
+}
+
+rString += "  Resulting in a score of:"+rValue;
+return {value : rValue, desc: rString};
+};
 
 
 poolHall.PANES = {
@@ -516,33 +952,89 @@ poolHall.PANES = {
 			'</div>'+		
 	'</pane>',
 	BALLSON : '<balls></balls>',
+	SHOTSUM : "<div id=shot-sum><div id='shot-desc'></div><div id='shot-value'></div>"+
+			'<input type="button" value="Accept-Shot" id="Accept-Shot" data-theme="a" data-mini="true" />'+
+			'<input type="button" value="Cancel-Shot" id="Reset-Shot" data-theme="b" data-mini="true" />'+
+			"</div>",
 	TOOLS : "<div id='tools'>"+
 	"<div id='result'>"+
 	'<input type="button" value="Easy-Shot" id="Easy-Shot" data-theme="a" data-mini="true" />'+
-	'<input type="button" value="Easy-Miss" id="Easy-Miss" data-theme="a" data-mini="true" />'+
 	'<input type="button" value="Hard-Shot" id="Hard-Shot" data-theme="a" data-mini="true" />'+
-	'<input type="button" value="Hard-Miss" id="Hard-Miss" data-theme="a" data-mini="true" />'+
 	'<input type="button" value="Safe-Shot" id="Safe-Shot" data-theme="a" data-mini="true" />'+
-	'<input type="button" value="Foul-Shot" id="Foul-Shot" data-theme="b" data-mini="true" />'+
-	'<input type="button" value="Back" id="back" data-theme="a" data-mini="true" />'+
+	'<input type="button" value="Easy-Miss" id="Easy-Miss" data-theme="c" data-mini="true" />'+
+	'<input type="button" value="Hard-Miss" id="Hard-Miss" data-theme="c" data-mini="true" />'+
+	'<input type="button" value="Foul-Shot" id="Foul-Shot" data-theme="c" data-mini="true" />'+
+	'<input type="button" value="Back" id="back" data-theme="b" data-mini="true" />'+
 	"</div>"+
 	"<div id='Easy-Shot'>"+
-	'<input type="button" value="Add-Sink(s)" id="Add-Sink" data-theme="b" data-mini="true" />'+
-	'<input type="button" value="Add-Off-Table(s)" id="Add-Off-Tables" data-theme="b" data-mini="true" />'+
+	'<span id="shot-type">Easy-Shot</span>'+
+	'<input type="button" value="Add-Sink(s)" id="Add-Sink" data-theme="c" data-mini="true" />'+
+	'<input type="button" value="Add-Off-Table(s)" id="Add-Off-Tables" data-theme="c" data-mini="true" />'+
 	'<input type="button" value="Confirm-Shot" id="Confirm-Shot" data-theme="a" data-mini="true" />'+
-	'<input type="button" value="Back" id="back-two" data-theme="a" data-mini="true" />'+
-	'<input type="button" value="Cancel" id="back" data-theme="a" data-mini="true" />'+
+	'<input type="button" value="Back" id="back-two" data-theme="b" data-mini="true" />'+
+	'<input type="button" value="Cancel" id="back" data-theme="b" data-mini="true" />'+
 	"</div>"+
 	"<div id='Easy-Miss'>"+
-	'<input type="button" value="Add-Sink(s)" id="Add-Sink" data-theme="b" data-mini="true" />'+
-	'<input type="button" value="Add-Off-Table(s)" id="Add-Off-Tables" data-theme="b" data-mini="true" />'+
+	'<span id="shot-type">Easy-Miss</span>'+
+	'<input type="button" value="Add-Sink(s)" id="Add-Sink" data-theme="c" data-mini="true" />'+
+	'<input type="button" value="Add-Off-Table(s)" id="Add-Off-Tables" data-theme="c" data-mini="true" />'+
 	'<input type="button" value="Confirm-Shot" id="Confirm-Shot" data-theme="a" data-mini="true" />'+
-	'<input type="button" value="Back" id="back-two" data-theme="a" data-mini="true" />'+
-	'<input type="button" value="Cancel" id="back" data-theme="a" data-mini="true" />'+
+	'<input type="button" value="Back" id="back-two" data-theme="b" data-mini="true" />'+
+	'<input type="button" value="Cancel" id="back" data-theme="b" data-mini="true" />'+
+	"</div>"+
+	"<div id='Hard-Shot'>"+
+	'<span id="shot-type">Hard-Shot</span>'+
+	'<input type="button" value="Add-Shot(s)" id="Add-Shots" data-theme="a" data-mini="true" />'+
+	'<input type="button" value="Add-Sink(s)" id="Add-Sink" data-theme="c" data-mini="true" />'+
+	'<input type="button" value="Add-Off-Table(s)" id="Add-Off-Tables" data-theme="c" data-mini="true" />'+
+	'<input type="button" value="Confirm-Shot" id="Confirm-Shot" data-theme="a" data-mini="true" />'+
+	'<input type="button" value="Back" id="back-two" data-theme="b" data-mini="true" />'+
+	'<input type="button" value="Cancel" id="back" data-theme="b" data-mini="true" />'+
+	"</div>"+
+	"<div id='Hard-Miss'>"+
+	'<span id="shot-type">Hard-Miss</span>'+
+	'<input type="button" value="Add-Sink(s)" id="Add-Sink" data-theme="c" data-mini="true" />'+
+	'<input type="button" value="Add-Off-Table(s)" id="Add-Off-Tables" data-theme="c" data-mini="true" />'+
+	'<input type="button" value="Confirm-Shot" id="Confirm-Shot" data-theme="a" data-mini="true" />'+
+	'<input type="button" value="Back" id="back-two" data-theme="b" data-mini="true" />'+
+	'<input type="button" value="Cancel" id="back" data-theme="b" data-mini="true" />'+
+	"</div>"+
+	"<div id='Safe-Shot'>"+
+	'<span id="shot-type">Safe-Shot</span>'+
+	'<input type="button" value="Add-Sink(s)" id="Add-Sink" data-theme="c" data-mini="true" />'+
+	'<input type="button" value="Add-Off-Table(s)" id="Add-Off-Tables" data-theme="c" data-mini="true" />'+
+	'<input type="button" value="Confirm-Shot" id="Confirm-Shot" data-theme="a" data-mini="true" />'+
+	'<input type="button" value="Back" id="back-two" data-theme="b" data-mini="true" />'+
+	'<input type="button" value="Cancel" id="back" data-theme="b" data-mini="true" />'+
+	"</div>"+
+	"<div id='Foul-Shot'>"+
+	'<span id="shot-type">Foul-Shot</span>'+
+	'<input type="button" value="Add-Sink(s)" id="Add-Sink" data-theme="c" data-mini="true" />'+
+	'<input type="button" value="Add-Off-Table(s)" id="Add-Off-Tables" data-theme="c" data-mini="true" />'+
+	'<input type="button" value="Confirm-Shot" id="Confirm-Shot" data-theme="a" data-mini="true" />'+
+	'<input type="button" value="Back" id="back-two" data-theme="b" data-mini="true" />'+
+	'<input type="button" value="Cancel" id="back" data-theme="b" data-mini="true" />'+
+	"</div>"+
+	"<div id='Add-Shots'>"+
+	'<span id="shot-type">Add-Shot(s)</span>'+
+	'<input type="button" value="Confirm-Shot(s)" id="Confirm-Shots" data-theme="a" data-mini="true" />'+
+	'<input type="button" value="Back" id="back-two" data-theme="b" data-mini="true" />'+
 	"</div>"+
 	"<div id='Add-Sink'>"+
-	'<input type="button" value="Confirm-Sinks" id="Confirm-Sinks" data-theme="a" data-mini="true" />'+
-	'<input type="button" value="Back" id="back-two" data-theme="a" data-mini="true" />'+
+	'<span id="shot-type">Add-Sink(s)</span>'+
+	'<input type="button" value="Confirm-Sink(s)" id="Confirm-Sinks" data-theme="c" data-mini="true" />'+
+	'<input type="button" value="Back" id="back-two" data-theme="b" data-mini="true" />'+
+	"</div>"+
+	"<div id='Add-Off-Tables'>"+
+	'<span id="shot-type">Add-Off-Table(s)</span>'+
+	'<input type="button" value="Confirm-Off-Table(s)" id="Confirm-Off-Tables" data-theme="c" data-mini="true" />'+
+	'<input type="button" value="Back" id="back-two" data-theme="b" data-mini="true" />'+
+	"</div>"+
+	"<div id='Break'>"+
+	'<span id="shot-type">Break Result(s)</span>'+
+	'<input type="button" value="Add-Sink(s)" id="Add-Sink" data-theme="b" data-mini="true" />'+
+	'<input type="button" value="Add-Off-Table(s)" id="Add-Off-Tables" data-theme="c" data-mini="true" />'+
+	'<input type="button" value="Confirm-Break" id="Confirm-Break" data-theme="a" data-mini="true" />'+
 	"</div>"+
 	"</div>",
 };
@@ -594,10 +1086,11 @@ Eight_Ball_Crazy : {
 		id : 0,
 		name : "Cue",
 		rules : {
-			make : -50,
+			make : -20,
 		},
 		imgUrl : "./imgs/balls/Cue.png",
 		sunk : false,
+		state : "onTable",
 		},
 	One : {
 		id : 1,
@@ -610,6 +1103,7 @@ Eight_Ball_Crazy : {
 		},
 		imgUrl : "./imgs/balls/1.png",
 		sunk : false,
+		state : "onTable",
 	},
 	Two : {
 		id : 2,
@@ -621,7 +1115,7 @@ Eight_Ball_Crazy : {
 			hard_shot_miss : -2,
 		},
 		imgUrl : "./imgs/balls/2.png",
-		sunk : false,
+		sunk : false, state : "onTable",
 	},
 	Three : {
 		id : 3,
@@ -633,7 +1127,7 @@ Eight_Ball_Crazy : {
 			hard_shot_miss : -3,
 		},
 		imgUrl : "./imgs/balls/3.png",
-		sunk : false,
+		sunk : false, state : "onTable",
 	},
 	Four : {
 		id : 4,
@@ -645,7 +1139,7 @@ Eight_Ball_Crazy : {
 			hard_shot_miss : -4,
 		},
 		imgUrl : "./imgs/balls/4.png",
-		sunk : false,
+		sunk : false, state : "onTable",
 	},
 	Five : {
 		id : 5,
@@ -657,7 +1151,7 @@ Eight_Ball_Crazy : {
 			hard_shot_miss : -5,
 		},
 		imgUrl : "./imgs/balls/5.png",
-		sunk : false,
+		sunk : false, state : "onTable",
 	},
 	Six : {
 		id : 6,
@@ -669,7 +1163,7 @@ Eight_Ball_Crazy : {
 			hard_shot_miss : -6,
 		},
 		imgUrl : "./imgs/balls/6.png",
-		sunk : false,
+		sunk : false, state : "onTable",
 	},
 	Seven : {
 		id : 7,
@@ -681,7 +1175,7 @@ Eight_Ball_Crazy : {
 			hard_shot_miss : -7,
 		},
 		imgUrl : "./imgs/balls/7.png",
-		sunk : false,
+		sunk : false, state : "onTable",
 	},
 	Eight : {
 		id : 8,
@@ -693,7 +1187,7 @@ Eight_Ball_Crazy : {
 			hard_shot_miss : -8,
 		},
 		imgUrl : "./imgs/balls/8.png",
-		sunk : false,
+		sunk : false, state : "onTable",
 	},
 	Nine : {
 		id : 9,
@@ -705,7 +1199,7 @@ Eight_Ball_Crazy : {
 			hard_shot_miss : -9,
 		},
 		imgUrl : "./imgs/balls/9.png",
-		sunk : false,
+		sunk : false, state : "onTable",
 	},
 	Ten : {
 		id : 10,
@@ -717,7 +1211,7 @@ Eight_Ball_Crazy : {
 			hard_shot_miss : -10,
 		},
 		imgUrl : "./imgs/balls/10.png",
-		sunk : false,
+		sunk : false, state : "onTable",
 	},
 	Eleven : {
 		id : 11,
@@ -729,7 +1223,7 @@ Eight_Ball_Crazy : {
 			hard_shot_miss : -11,
 		},
 		imgUrl : "./imgs/balls/11.png",
-		sunk : false,
+		sunk : false, state : "onTable",
 	},
 	Twelve : {
 		id : 12,
@@ -741,7 +1235,7 @@ Eight_Ball_Crazy : {
 			hard_shot_miss : -12,
 		},
 		imgUrl : "./imgs/balls/12.png",
-		sunk : false,
+		sunk : false, state : "onTable",
 	},
 	Thirt : {
 		id : 13,
@@ -753,7 +1247,7 @@ Eight_Ball_Crazy : {
 			hard_shot_miss : -13,
 		},
 		imgUrl : "./imgs/balls/13.png",
-		sunk : false,
+		sunk : false, state : "onTable",
 	},
 	Fourt : {
 		id : 14,
@@ -765,7 +1259,7 @@ Eight_Ball_Crazy : {
 			hard_shot_miss : -14,
 		},
 		imgUrl : "./imgs/balls/14.png",
-		sunk : false,
+		sunk : false, state : "onTable",
 	},
 	Fift : {
 		id : 15,
@@ -777,7 +1271,7 @@ Eight_Ball_Crazy : {
 			hard_shot_miss : -15,
 		},
 		imgUrl : "./imgs/balls/15.png",
-		sunk : false,
+		sunk : false, state : "onTable",
 	}
 	}
 },		Crazy_Nine_Ball : {
@@ -795,7 +1289,7 @@ Eight_Ball_Crazy : {
 			make : -50,
 		},
 		imgUrl : "./imgs/balls/Cue.png",
-		sunk : false,
+		sunk : false, state : "onTable",
 	},
 	One : {
 		id : 1,
@@ -807,7 +1301,7 @@ Eight_Ball_Crazy : {
 			hard_shot_miss : -1,
 		},
 		imgUrl : "./imgs/balls/1.png",
-		sunk : false,
+		sunk : false, state : "onTable",
 	},
 	Two : {
 		id : 2,
@@ -819,7 +1313,7 @@ Eight_Ball_Crazy : {
 			hard_shot_miss : -2,
 		},
 		imgUrl : "./imgs/balls/2.png",
-		sunk : false,
+		sunk : false, state : "onTable",
 	},
 	Three : {
 		id : 3,
@@ -831,7 +1325,7 @@ Eight_Ball_Crazy : {
 			hard_shot_miss : -3,
 		},
 		imgUrl : "./imgs/balls/3.png",
-		sunk : false,
+		sunk : false, state : "onTable",
 	},
 	Four : {
 		id : 4,
@@ -843,7 +1337,7 @@ Eight_Ball_Crazy : {
 			hard_shot_miss : -4,
 		},
 		imgUrl : "./imgs/balls/4.png",
-		sunk : false,
+		sunk : false, state : "onTable",
 	},
 	Five : {
 		id : 5,
@@ -855,7 +1349,7 @@ Eight_Ball_Crazy : {
 			hard_shot_miss : -5,
 		},
 		imgUrl : "./imgs/balls/5.png",
-		sunk : false,
+		sunk : false, state : "onTable",
 	},
 	Six : {
 		id : 6,
@@ -867,7 +1361,7 @@ Eight_Ball_Crazy : {
 			hard_shot_miss : -6,
 		},
 		imgUrl : "./imgs/balls/6.png",
-		sunk : false,
+		sunk : false, state : "onTable",
 	},
 	Seven : {
 		id : 7,
@@ -879,7 +1373,7 @@ Eight_Ball_Crazy : {
 			hard_shot_miss : -7,
 		},
 		imgUrl : "./imgs/balls/7.png",
-		sunk : false,
+		sunk : false, state : "onTable",
 	},
 	Eight : {
 		id : 8,
@@ -891,7 +1385,7 @@ Eight_Ball_Crazy : {
 			hard_shot_miss : -8,
 		},
 		imgUrl : "./imgs/balls/8.png",
-		sunk : false,
+		sunk : false, state : "onTable",
 	},
 	Nine : {
 		id : 9,
@@ -903,7 +1397,7 @@ Eight_Ball_Crazy : {
 			hard_shot_miss : -9,
 		},
 		imgUrl : "./imgs/balls/9.png",
-		sunk : false,
+		sunk : false, state : "onTable",
 	}
   }
 }
